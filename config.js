@@ -1,10 +1,9 @@
-// Firebase web config for sidalog. Paste the values from
-// Firebase console > Project settings > Your apps > Web app > SDK setup and configuration.
+// Firebase web config for sidalog (identifies the project; not a secret).
 window.SIDALOG_FIREBASE = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE.appspot.com",
-  messagingSenderId: "PASTE",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyBSwAsgyEJusqNPxzCjbDNujVpauZnUAVw",
+  authDomain: "sidalog-b527f.firebaseapp.com",
+  projectId: "sidalog-b527f",
+  storageBucket: "sidalog-b527f.firebasestorage.app",
+  messagingSenderId: "333682161010",
+  appId: "1:333682161010:web:15333a4b4e78a4c326d9eb"
 };
