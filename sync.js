@@ -49,6 +49,7 @@ if (cfg && cfg.apiKey && !cfg.apiKey.startsWith('PASTE')) {
     if (unsub) { unsub(); unsub = null; }
     if (!user) {
       btn.textContent = 'Sign in';
+      btn.classList.remove('signed');
       window.__cloudSave = null;
       window.__setCloud(false);
       return;
@@ -58,8 +59,16 @@ if (cfg && cfg.apiKey && !cfg.apiKey.startsWith('PASTE')) {
     const av = document.createElement('span');
     av.className = 'av';
     av.textContent = initial;
+    if (user.photoURL) {
+      const img = document.createElement('img');
+      img.src = user.photoURL;
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.onload = () => { av.textContent = ''; av.append(img); av.classList.add('photo'); };
+    }
     btn.append(av);
     btn.setAttribute('aria-label', 'Account');
+    btn.classList.add('signed');
 
     const col = collection(db, 'users', user.uid, 'marks');
     window.__cloudSave = (id, data) => setDoc(doc(col, id), data);

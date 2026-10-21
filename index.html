@@ -117,10 +117,13 @@ select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);back
 .mi svg{width:12px;height:12px;fill:currentColor;stroke:none}
 .mi.bib{color:#9A3412;background:#FDEFE6}.mi.sel{color:var(--ink-2);background:var(--soft)}
 .sh-head .mi{margin-top:8px}
-.acct{font-weight:600}.acct .av{width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;background:var(--accent);color:#fff;font-size:.72rem;font-weight:700}
+.acct{font-weight:600}.acct .av.photo{background:none}.acct .av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.acct.signed{padding:5px}
+.acct .av{width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;background:var(--accent);color:#fff;font-size:.72rem;font-weight:700}
 .menu{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:6px;min-width:220px}.menu p{margin:6px 10px;font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:10px;border-radius:10px;font:inherit;font-weight:600;color:var(--ink)}.menu button:hover{background:var(--soft)}
 .linkbtn[data-signin]{display:none}.has-auth .linkbtn[data-signin]{display:inline}
 .linkbtn{border:0;background:none;padding:0;font:inherit;color:var(--accent);font-weight:600;text-decoration:underline;cursor:pointer}
+.qhint{display:block;font-size:.78rem;font-weight:500;color:var(--muted);margin-top:2px}
 .savehint{margin:-4px 0 10px;font-size:.76rem;color:var(--muted)}
 .warn{font-size:.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
 .favbtn{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:var(--muted);display:grid;place-items:center}
@@ -218,7 +221,7 @@ textarea:focus{outline:none;border-color:var(--accent);background:var(--surface)
         <div><h1>sidalog</h1><p>Singapore · Want to go</p></div>
       </div>
       <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        <input type="search" id="q" placeholder="Search places, cuisines, areas" aria-label="Search places"></label>
+        <input type="search" id="q" placeholder="Search a dish, cuisine, place or area" aria-label="Search places"></label>
       <button class="iconbtn filters-btn" id="openF" type="button" aria-label="Filters"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="badge" id="fcount" hidden>0</span></button>
       <button class="iconbtn acct" id="acct" type="button" hidden>Sign in</button>
     </div>
@@ -261,6 +264,7 @@ textarea:focus{outline:none;border-color:var(--accent);background:var(--surface)
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-name" hidden></div>
 
 <script src="art.js"></script>
+<script src="search.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const P=d=>`<svg viewBox="0 0 24 24">${d}</svg>`;
@@ -337,9 +341,12 @@ function chipRow(id,key,values){
     b.onclick=()=>toggle(key,v);el.appendChild(b);
   }
 }
+let QC={raw:null},SC=new Map();
+function query(){const raw=$('#q').value.trim();if(QC.raw!==raw){QC=window.SmartSearch?window.SmartSearch.prepare(raw):{active:false};QC.raw=raw;SC=new Map()}return QC}
+function scoreOf(p){if(!SC.has(p.id))SC.set(p.id,window.SmartSearch.score(p,QC,markOf(p).note));return SC.get(p.id)}
 function passes(p,skip){
-  const text=$('#q').value.trim().toLowerCase();
-  if(text && !(`${p.n} ${p.q} ${p.s} ${p.gc||''} ${p.ad||''} ${p.a||''} ${p.r} ${p.c} ${markOf(p).note||''}`.toLowerCase().includes(text)))return false;
+  const Q=query();
+  if(Q.active && !scoreOf(p))return false;
   if(skip!=='x'&&F.x.size&&!F.x.has(String(miKey(p))))return false;
   if(skip!=='g'&&F.g.size){const min=Math.max(...[...F.g].map(Number));if(!(p.gr>=min))return false}
   if(!F.m.has('closed')&&p.cl==='perm')return false;
@@ -387,6 +394,7 @@ function sorted(list){
   if(s==='budget-desc')l.sort((a,b)=>(b.b||0)-(a.b||0)||(b.gr||0)-(a.gr||0));
   if(s==='mine')l.sort((a,b)=>(markOf(b).rating||0)-(markOf(a).rating||0)||byName(a,b));
   if(s==='area')l.sort((a,b)=>(a.a||'~').localeCompare(b.a||'~')||byName(a,b));
+  if(query().active&&s==='recent')l.sort((a,b)=>scoreOf(b)-scoreOf(a));
   return l;
 }
 function card(p){
@@ -408,7 +416,8 @@ function card(p){
 function render(){
   renderFilters();
   const list=sorted(PLACES.filter(p=>passes(p)));
-  $('#count').innerHTML=`${list.length.toLocaleString()} places<span>of ${PLACES.length.toLocaleString()} saved</span>`;
+  const Qh=query(),rel=(Qh.related||[]).slice(0,4);
+  $('#count').innerHTML=`${list.length.toLocaleString()} places<span>of ${PLACES.length.toLocaleString()} saved</span>`+(Qh.active&&rel.length?`<small class="qhint">Including ${esc(rel.join(', '))} places</small>`:'');
   $('#grid').innerHTML=list.length?list.slice(0,shown).map(card).join(''):'<div class="empty"><b>No places match</b>Try removing a filter or searching for something else.</div>';
   $('#more').hidden=list.length<=shown;
   $('#moreBtn').textContent=`Show ${Math.min(60,list.length-shown)} more`;
